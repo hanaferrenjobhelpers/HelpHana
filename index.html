@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LAI Thank You Card Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+    <div class="bg-white p-8 rounded-lg shadow-lg max-w-md w-full">
+        <h1 class="text-2xl font-bold mb-6 text-center">LAI Thank You Card Generator</h1>
+        <form id="cardForm">
+            <div class="mb-4">
+                <label for="name" class="block text-sm font-medium text-gray-700">Donor Name</label>
+                <input type="text" id="name" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" required>
+            </div>
+            <div class="mb-4">
+                <label for="date" class="block text-sm font-medium text-gray-700">Date</label>
+                <input type="date" id="date" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" required>
+            </div>
+            <div class="mb-4">
+                <label for="amount" class="block text-sm font-medium text-gray-700">Amount (IDR)</label>
+                <input type="number" id="amount" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" required>
+            </div>
+        </form>
+        <div class="mb-6">
+            <canvas id="cardCanvas" width="960" height="960" class="border border-gray-300 w-full h-auto"></canvas>
+        </div>
+        <button id="downloadBtn" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">Download Card</button>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
