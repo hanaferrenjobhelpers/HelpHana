@@ -5,29 +5,54 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LAI Thank You Card Generator</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center">
-    <div class="bg-white p-8 rounded-lg shadow-lg max-w-md w-full">
-        <h1 class="text-2xl font-bold mb-6 text-center">LAI Thank You Card Generator</h1>
-        <form id="cardForm">
-            <div class="mb-4">
-                <label for="name" class="block text-sm font-medium text-gray-700">Donor Name</label>
-                <input type="text" id="name" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" required>
+<body class="bg-slate-50 min-h-screen flex items-center justify-center p-4">
+    <div class="bg-white p-6 md:p-8 rounded-2xl shadow-xl max-w-lg w-full border border-slate-100">
+        <div class="flex items-center justify-center mb-6">
+            <div class="bg-indigo-100 p-3 rounded-full mr-3">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                </svg>
             </div>
-            <div class="mb-4">
-                <label for="date" class="block text-sm font-medium text-gray-700">Date</label>
-                <input type="date" id="date" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" required>
-            </div>
-            <div class="mb-4">
-                <label for="amount" class="block text-sm font-medium text-gray-700">Amount (IDR)</label>
-                <input type="number" id="amount" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" required>
-            </div>
-        </form>
-        <div class="mb-6">
-            <canvas id="cardCanvas" width="960" height="960" class="border border-gray-300 w-full h-auto"></canvas>
+            <h1 class="text-xl font-bold text-slate-800 uppercase tracking-tight">LAI Card Generator</h1>
         </div>
-        <button id="downloadBtn" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">Download Card</button>
+
+        <div class="space-y-4 mb-8">
+            <div>
+                <label for="name" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Nama Donor</label>
+                <input type="text" id="name" placeholder="Contoh: Budi Santoso" class="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none text-slate-700" required>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label for="date" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Tanggal</label>
+                    <input type="date" id="date" class="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none text-slate-700" required>
+                </div>
+                <div>
+                    <label for="amount" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Jumlah (IDR)</label>
+                    <input type="number" id="amount" placeholder="50000" class="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all outline-none text-slate-700" required>
+                </div>
+            </div>
+        </div>
+
+        <div class="relative group mb-6">
+            <div class="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl blur opacity-15 group-hover:opacity-25 transition duration-1000"></div>
+            <canvas id="cardCanvas" width="960" height="960" class="relative bg-white border border-slate-200 rounded-xl w-full h-auto shadow-sm"></canvas>
+        </div>
+
+        <button id="downloadBtn" class="group flex items-center justify-center w-full bg-slate-900 text-white py-4 px-6 rounded-xl font-semibold hover:bg-slate-800 active:scale-[0.98] transition-all focus:outline-none focus:ring-4 focus:ring-slate-200 shadow-lg shadow-slate-200">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 group-hover:translate-y-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Download Card Image
+        </button>
+        <p class="mt-4 text-center text-[10px] text-slate-400 uppercase tracking-[0.2em]">Lembaga Alkitab Indonesia</p>
     </div>
     <script src="app.js"></script>
 </body>
