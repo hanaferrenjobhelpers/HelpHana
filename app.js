@@ -3,6 +3,16 @@ const dukunganHeaderInput = document.getElementById('dukunganHeader');
 const dukunganSubInput = document.getElementById('dukunganSub');
 const dateInput = document.getElementById('date');
 const amountInput = document.getElementById('amount');
+const nameSizeInput = document.getElementById('nameSize');
+const nameColorInput = document.getElementById('nameColor');
+const dukunganHeaderSizeInput = document.getElementById('dukunganHeaderSize');
+const dukunganHeaderColorInput = document.getElementById('dukunganHeaderColor');
+const dukunganSubSizeInput = document.getElementById('dukunganSubSize');
+const dukunganSubColorInput = document.getElementById('dukunganSubColor');
+const amountSizeInput = document.getElementById('amountSize');
+const amountColorInput = document.getElementById('amountColor');
+const dateSizeInput = document.getElementById('dateSize');
+const dateColorInput = document.getElementById('dateColor');
 const canvas = document.getElementById('cardCanvas');
 const ctx = canvas.getContext('2d');
 const downloadBtn = document.getElementById('downloadBtn');
@@ -144,28 +154,64 @@ function formatIndonesianDate(dateString) {
     }).format(date);
 }
 
-function drawOutlinedText(ctx, text, x, y, size) {
-    ctx.font = `900 ${size}px "Inter", sans-serif`;
+function getStrokeColor(fillColor) {
+    const color = (fillColor || '').toLowerCase();
+    if (color === '#ffffff') return '#4f46e5';
+    if (color === '#eab308' || color === '#22c55e') return '#111827';
+    if (color === '#000000') return '#ffffff';
+    return '#ffffff';
+}
+
+function fitFontSize(text, requestedSize, fontWeight, maxWidth) {
+    let size = requestedSize;
+    while (size > 12) {
+        ctx.font = `${fontWeight} ${size}px "Inter", sans-serif`;
+        if (ctx.measureText(text).width <= maxWidth) break;
+        size -= 1;
+    }
+    return size;
+}
+
+function drawOutlinedText(ctx, text, x, y, size, fillColor, maxWidth, fontWeight = 900) {
+    const resolvedSize = fitFontSize(text, size, fontWeight, maxWidth);
+    ctx.font = `${fontWeight} ${resolvedSize}px "Inter", sans-serif`;
     ctx.textAlign = 'center';
     ctx.lineJoin = 'round';
     ctx.miterLimit = 2;
-    ctx.lineWidth = size * 0.28;
-    ctx.strokeStyle = '#6d28d9';
+    ctx.lineWidth = resolvedSize * 0.2;
+    ctx.strokeStyle = getStrokeColor(fillColor);
     ctx.strokeText(text, x, y);
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = fillColor;
     ctx.fillText(text, x, y);
 }
 
-function drawOutlinedTextSmall(ctx, text, x, y, size) {
-    ctx.font = `800 ${size}px "Inter", sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.lineJoin = 'round';
-    ctx.miterLimit = 2;
-    ctx.lineWidth = size * 0.2;
-    ctx.strokeStyle = '#ffffff';
-    ctx.strokeText(text, x, y);
-    ctx.fillStyle = '#6d28d9';
-    ctx.fillText(text, x, y);
+function initColorPickers() {
+    const pickerNodes = document.querySelectorAll('.color-picker');
+    pickerNodes.forEach((picker) => {
+        const targetId = picker.getAttribute('data-target');
+        const hiddenInput = document.getElementById(targetId);
+        if (!hiddenInput) return;
+
+        const swatches = Array.from(picker.querySelectorAll('.color-swatch'));
+
+        const syncActiveState = () => {
+            swatches.forEach((swatch) => {
+                const swatchColor = (swatch.getAttribute('data-color') || '').toLowerCase();
+                const selectedColor = (hiddenInput.value || '').toLowerCase();
+                swatch.classList.toggle('active', swatchColor === selectedColor);
+            });
+        };
+
+        swatches.forEach((swatch) => {
+            swatch.addEventListener('click', () => {
+                hiddenInput.value = swatch.getAttribute('data-color') || hiddenInput.value;
+                syncActiveState();
+                renderCard();
+            });
+        });
+
+        syncActiveState();
+    });
 }
 
 function renderCard() {
@@ -181,30 +227,47 @@ function renderCard() {
         const nameLines = nameStr.split('\n');
         let nameY = 410;
         if (nameLines.length > 1) nameY = 380;
+        const nameSize = Number(nameSizeInput.value || 65);
+        const nameColor = nameColorInput.value || '#a855f7';
         nameLines.forEach((line, i) => {
-            if(line.trim()) drawOutlinedText(ctx, line.trim(), centerX, nameY + (i * 75), 65);
+            if(line.trim()) drawOutlinedText(ctx, line.trim(), centerX, nameY + (i * 75), nameSize, nameColor, 760, 900);
         });
     }
     
     const dukHeader = (dukunganHeaderInput.value).toUpperCase();
-    if (dukHeader) drawOutlinedText(ctx, dukHeader, centerX, 580, 52);
+    if (dukHeader) {
+        const dukHeaderSize = Number(dukunganHeaderSizeInput.value || 52);
+        const dukHeaderColor = dukunganHeaderColorInput.value || '#a855f7';
+        drawOutlinedText(ctx, dukHeader, centerX, 580, dukHeaderSize, dukHeaderColor, 820, 900);
+    }
     
     const dukSub = (dukunganSubInput.value).toUpperCase();
-    if (dukSub) drawOutlinedTextSmall(ctx, dukSub, centerX, 640, 26);
+    if (dukSub) {
+        const dukSubSize = Number(dukunganSubSizeInput.value || 26);
+        const dukSubColor = dukunganSubColorInput.value || '#a855f7';
+        drawOutlinedText(ctx, dukSub, centerX, 640, dukSubSize, dukSubColor, 760, 800);
+    }
     
     const amtStr = formatIDR(amountInput.value);
-    if (amountInput.value) drawOutlinedText(ctx, amtStr, centerX, 770, 68); // Increased y from 740 to 770 to lower it
+    if (amountInput.value) {
+        const amountSize = Number(amountSizeInput.value || 68);
+        const amountColor = amountColorInput.value || '#a855f7';
+        drawOutlinedText(ctx, amtStr, centerX, 770, amountSize, amountColor, 700, 900);
+    }
     
     const dateStr = formatIndonesianDate(dateInput.value);
     if (dateStr) {
-        ctx.font = `700 24px "Inter", sans-serif`;
+        const dateSize = Number(dateSizeInput.value || 24);
+        const dateColor = dateColorInput.value || '#000000';
+        const resolvedDateSize = fitFontSize(dateStr, dateSize, 700, 420);
+        ctx.font = `700 ${resolvedDateSize}px "Inter", sans-serif`;
         ctx.textAlign = 'center';
-        ctx.fillStyle = '#1e293b';
+        ctx.fillStyle = dateColor;
         ctx.fillText(dateStr, centerX + 45, 860); // Added + 20 to move it slightly right
     }
 }
 
-[nameInput, dukunganHeaderInput, dukunganSubInput, dateInput, amountInput].forEach(input => {
+[nameInput, dukunganHeaderInput, dukunganSubInput, dateInput, amountInput, nameSizeInput, nameColorInput, dukunganHeaderSizeInput, dukunganHeaderColorInput, dukunganSubSizeInput, dukunganSubColorInput, amountSizeInput, amountColorInput, dateSizeInput, dateColorInput].forEach(input => {
     input.addEventListener('input', renderCard);
 });
 
@@ -216,3 +279,4 @@ downloadBtn.addEventListener('click', () => {
 });
 
 loadTemplates();
+initColorPickers();

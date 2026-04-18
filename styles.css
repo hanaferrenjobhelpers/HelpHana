@@ -1,1 +1,24 @@
-/* Custom styles if needed */
+/* Color swatch controls */
+.color-swatch {
+	appearance: none;
+	-webkit-appearance: none;
+	display: inline-block;
+	width: 20px;
+	height: 20px;
+	min-width: 20px;
+	min-height: 20px;
+	padding: 0;
+	border-radius: 9999px;
+	border: 1px solid #cbd5e1;
+	cursor: pointer;
+	background-clip: padding-box;
+}
+
+.color-swatch[data-color="#ffffff"] {
+	border-color: #94a3b8;
+}
+
+.color-swatch.active {
+	outline: 2px solid #334155;
+	outline-offset: 1px;
+}
