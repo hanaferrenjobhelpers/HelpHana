@@ -172,6 +172,22 @@ function fitFontSize(text, requestedSize, fontWeight, maxWidth) {
     return size;
 }
 
+function fitFontSizeForLines(lines, requestedSize, fontWeight, maxWidth) {
+    const validLines = lines.map((line) => line.trim()).filter(Boolean);
+    if (validLines.length === 0) return requestedSize;
+
+    let size = requestedSize;
+    while (size > 12) {
+        ctx.font = `${fontWeight} ${size}px "Inter", sans-serif`;
+        const widestLine = validLines.reduce((maxWidthSoFar, line) => {
+            return Math.max(maxWidthSoFar, ctx.measureText(line).width);
+        }, 0);
+        if (widestLine <= maxWidth) break;
+        size -= 1;
+    }
+    return size;
+}
+
 function drawOutlinedText(ctx, text, x, y, size, fillColor, maxWidth, fontWeight = 900) {
     const resolvedSize = fitFontSize(text, size, fontWeight, maxWidth);
     ctx.font = `${fontWeight} ${resolvedSize}px "Inter", sans-serif`;
@@ -179,6 +195,18 @@ function drawOutlinedText(ctx, text, x, y, size, fillColor, maxWidth, fontWeight
     ctx.lineJoin = 'round';
     ctx.miterLimit = 2;
     ctx.lineWidth = resolvedSize * 0.2;
+    ctx.strokeStyle = getStrokeColor(fillColor);
+    ctx.strokeText(text, x, y);
+    ctx.fillStyle = fillColor;
+    ctx.fillText(text, x, y);
+}
+
+function drawOutlinedTextFixedSize(ctx, text, x, y, fixedSize, fillColor, fontWeight = 900) {
+    ctx.font = `${fontWeight} ${fixedSize}px "Inter", sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.lineJoin = 'round';
+    ctx.miterLimit = 2;
+    ctx.lineWidth = fixedSize * 0.2;
     ctx.strokeStyle = getStrokeColor(fillColor);
     ctx.strokeText(text, x, y);
     ctx.fillStyle = fillColor;
@@ -229,8 +257,9 @@ function renderCard() {
         if (nameLines.length > 1) nameY = 380;
         const nameSize = Number(nameSizeInput.value || 65);
         const nameColor = nameColorInput.value || '#a855f7';
+        const resolvedNameSize = fitFontSizeForLines(nameLines, nameSize, 900, 760);
         nameLines.forEach((line, i) => {
-            if(line.trim()) drawOutlinedText(ctx, line.trim(), centerX, nameY + (i * 75), nameSize, nameColor, 760, 900);
+            if(line.trim()) drawOutlinedTextFixedSize(ctx, line.trim(), centerX, nameY + (i * 75), resolvedNameSize, nameColor, 900);
         });
     }
     
