@@ -155,10 +155,7 @@ function formatIndonesianDate(dateString) {
 }
 
 function getStrokeColor(fillColor) {
-    const color = (fillColor || '').toLowerCase();
-    if (color === '#ffffff') return '#4f46e5';
-    if (color === '#eab308' || color === '#22c55e') return '#111827';
-    if (color === '#000000') return '#ffffff';
+    // Keep outline consistently white for all text colors.
     return '#ffffff';
 }
 
