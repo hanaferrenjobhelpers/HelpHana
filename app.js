@@ -14,16 +14,30 @@ const amountColorInput = document.getElementById('amountColor');
 const dateSizeInput = document.getElementById('dateSize');
 const dateColorInput = document.getElementById('dateColor');
 const canvas = document.getElementById('cardCanvas');
+canvas.style.touchAction = 'none';
 const ctx = canvas.getContext('2d');
 const downloadBtn = document.getElementById('downloadBtn');
 const uploadTemplate = document.getElementById('uploadTemplate');
 const templateList = document.getElementById('templateList');
+const freestyleBtn = document.getElementById('freestyleBtn');
+const freestyleNotice = document.getElementById('freestyleNotice');
 
 const STORAGE_KEY = 'lai_templates';
 let templates = [];
 let currentTemplateIndex = 0;
 let defaultTemplate = 'assets/BG_1.jpeg';
 const templateImg = new Image();
+
+let isFreestyleMode = false;
+let activeLayer = null;
+let dragOffset = { x: 0, y: 0 };
+const textLayers = {
+    name: { x: canvas.width / 2, y: 410 },
+    dukunganHeader: { x: canvas.width / 2, y: 580 },
+    dukunganSub: { x: canvas.width / 2, y: 640 },
+    amount: { x: canvas.width / 2, y: 770 },
+    date: { x: canvas.width / 2 + 45, y: 860 }
+};
 
 function loadTemplates() {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -159,15 +173,139 @@ function getStrokeColor(fillColor) {
     return '#ffffff';
 }
 
-function fitFontSize(text, requestedSize, fontWeight, maxWidth) {
-    let size = requestedSize;
-    while (size > 12) {
-        ctx.font = `${fontWeight} ${size}px "Inter", sans-serif`;
-        if (ctx.measureText(text).width <= maxWidth) break;
-        size -= 1;
-    }
-    return size;
+function getCanvasCoordinates(event) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+        x: (event.clientX - rect.left) * (canvas.width / rect.width),
+        y: (event.clientY - rect.top) * (canvas.height / rect.height)
+    };
 }
+
+function measureTextBlock(lines, size, fontWeight = 900) {
+    ctx.font = `${fontWeight} ${size}px "Inter", sans-serif`;
+    return lines.reduce((max, line) => Math.max(max, ctx.measureText(line).width), 0);
+}
+
+function getTextBounds(layerKey, lines, size, fontWeight = 900, lineSpacing = size * 1.1) {
+    const layer = textLayers[layerKey];
+    if (!layer || lines.length === 0) return null;
+
+    const width = measureTextBlock(lines, size, fontWeight);
+    const height = size + (lines.length - 1) * lineSpacing;
+    const padding = 16;
+    return {
+        left: layer.x - width / 2 - padding,
+        top: layer.y - size - padding / 2,
+        right: layer.x + width / 2 + padding,
+        bottom: layer.y + (lines.length - 1) * lineSpacing + padding / 2,
+        width: width + padding * 2,
+        height: height + padding
+    };
+}
+
+function getLayerForPointer(x, y) {
+    const nameLines = nameInput.value.toUpperCase().split('\n').filter(Boolean);
+    if (nameLines.length > 0) {
+        const bounds = getTextBounds('name', nameLines, fitFontSizeForLines(nameLines, Number(nameSizeInput.value || 65), 900, 760), 900, Math.max(75, fitFontSizeForLines(nameLines, Number(nameSizeInput.value || 65), 900, 760) * 1.1));
+        if (bounds && x >= bounds.left && x <= bounds.right && y >= bounds.top && y <= bounds.bottom) return 'name';
+    }
+
+    const dukHeaderValue = dukunganHeaderInput.value.toUpperCase().trim();
+    if (dukHeaderValue) {
+        const bounds = getTextBounds('dukunganHeader', [dukHeaderValue], fitFontSize(dukHeaderValue, Number(dukunganHeaderSizeInput.value || 52), 900, 820), 900);
+        if (bounds && x >= bounds.left && x <= bounds.right && y >= bounds.top && y <= bounds.bottom) return 'dukunganHeader';
+    }
+
+    const dukSubValue = dukunganSubInput.value.toUpperCase().trim();
+    if (dukSubValue) {
+        const bounds = getTextBounds('dukunganSub', [dukSubValue], fitFontSize(dukSubValue, Number(dukunganSubSizeInput.value || 26), 800, 760), 800);
+        if (bounds && x >= bounds.left && x <= bounds.right && y >= bounds.top && y <= bounds.bottom) return 'dukunganSub';
+    }
+
+    const amountValue = formatIDR(amountInput.value);
+    if (amountValue) {
+        const bounds = getTextBounds('amount', [amountValue], fitFontSize(amountValue, Number(amountSizeInput.value || 68), 900, 700), 900);
+        if (bounds && x >= bounds.left && x <= bounds.right && y >= bounds.top && y <= bounds.bottom) return 'amount';
+    }
+
+    const dateValue = formatIndonesianDate(dateInput.value);
+    if (dateValue) {
+        const bounds = getTextBounds('date', [dateValue], fitFontSize(dateValue, Number(dateSizeInput.value || 24), 700, 420), 700);
+        if (bounds && x >= bounds.left && x <= bounds.right && y >= bounds.top && y <= bounds.bottom) return 'date';
+    }
+
+    return null;
+}
+
+function drawDebugBounds(bounds, active = false) {
+    if (!bounds) return;
+    ctx.save();
+    ctx.strokeStyle = active ? '#6366f1' : '#94a3b8';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 4]);
+    ctx.strokeRect(bounds.left, bounds.top, bounds.width, bounds.height);
+    ctx.restore();
+}
+
+function updateFreestyleButton() {
+    freestyleBtn.textContent = isFreestyleMode ? 'Freestyle: On' : 'Freestyle Mode';
+    freestyleBtn.classList.toggle('bg-indigo-600', isFreestyleMode);
+    freestyleBtn.classList.toggle('bg-slate-900', !isFreestyleMode);
+    freestyleNotice.classList.toggle('hidden', !isFreestyleMode);
+}
+
+function handleCanvasPointerDown(event) {
+    if (!isFreestyleMode) return;
+
+    const { x, y } = getCanvasCoordinates(event);
+    const hitLayer = getLayerForPointer(x, y);
+    if (hitLayer) {
+        activeLayer = hitLayer;
+        dragOffset.x = x - textLayers[hitLayer].x;
+        dragOffset.y = y - textLayers[hitLayer].y;
+        canvas.setPointerCapture(event.pointerId);
+    }
+}
+
+function handleCanvasPointerMove(event) {
+    const { x, y } = getCanvasCoordinates(event);
+    if (activeLayer) {
+        textLayers[activeLayer].x = x - dragOffset.x;
+        textLayers[activeLayer].y = y - dragOffset.y;
+        renderCard();
+        return;
+    }
+
+    if (isFreestyleMode) {
+        const hoverLayer = getLayerForPointer(x, y);
+        canvas.style.cursor = hoverLayer ? 'grab' : 'default';
+    } else {
+        canvas.style.cursor = 'default';
+    }
+}
+
+function handleCanvasPointerUp() {
+    activeLayer = null;
+}
+
+function setFreestyleMode(enabled) {
+    isFreestyleMode = enabled;
+    updateFreestyleButton();
+    renderCard();
+}
+
+function cycleFreestyleMode() {
+    setFreestyleMode(!isFreestyleMode);
+}
+
+function applyFreestyleListeners() {
+    canvas.addEventListener('pointerdown', handleCanvasPointerDown);
+    canvas.addEventListener('pointermove', handleCanvasPointerMove);
+    canvas.addEventListener('pointerup', handleCanvasPointerUp);
+    canvas.addEventListener('pointerleave', handleCanvasPointerUp);
+}
+
+applyFreestyleListeners();
 
 function fitFontSizeForLines(lines, requestedSize, fontWeight, maxWidth) {
     const validLines = lines.map((line) => line.trim()).filter(Boolean);
@@ -249,36 +387,50 @@ function renderCard() {
     // Draw inputs
     const nameStr = (nameInput.value).toUpperCase();
     if (nameStr) {
-        const nameLines = nameStr.split('\n');
-        let nameY = 410;
-        if (nameLines.length > 1) nameY = 380;
+        const nameLines = nameStr.split('\n').map((line) => line.trim()).filter(Boolean);
         const nameSize = Number(nameSizeInput.value || 65);
         const nameColor = nameColorInput.value || '#a855f7';
         const resolvedNameSize = fitFontSizeForLines(nameLines, nameSize, 900, 760);
+        const lineSpacing = Math.max(75, resolvedNameSize * 1.1);
         nameLines.forEach((line, i) => {
-            if(line.trim()) drawOutlinedTextFixedSize(ctx, line.trim(), centerX, nameY + (i * 75), resolvedNameSize, nameColor, 900);
+            if (line) drawOutlinedTextFixedSize(ctx, line, textLayers.name.x, textLayers.name.y + (i * lineSpacing), resolvedNameSize, nameColor, 900);
         });
+        if (isFreestyleMode) {
+            drawDebugBounds(getTextBounds('name', nameLines, resolvedNameSize, 900, lineSpacing), activeLayer === 'name');
+        }
     }
     
     const dukHeader = (dukunganHeaderInput.value).toUpperCase();
     if (dukHeader) {
         const dukHeaderSize = Number(dukunganHeaderSizeInput.value || 52);
         const dukHeaderColor = dukunganHeaderColorInput.value || '#a855f7';
-        drawOutlinedText(ctx, dukHeader, centerX, 580, dukHeaderSize, dukHeaderColor, 820, 900);
+        const resolvedHeaderSize = fitFontSize(dukHeader, dukHeaderSize, 900, 820);
+        drawOutlinedText(ctx, dukHeader, textLayers.dukunganHeader.x, textLayers.dukunganHeader.y, resolvedHeaderSize, dukHeaderColor, 820, 900);
+        if (isFreestyleMode) {
+            drawDebugBounds(getTextBounds('dukunganHeader', [dukHeader], resolvedHeaderSize, 900), activeLayer === 'dukunganHeader');
+        }
     }
     
     const dukSub = (dukunganSubInput.value).toUpperCase();
     if (dukSub) {
         const dukSubSize = Number(dukunganSubSizeInput.value || 26);
         const dukSubColor = dukunganSubColorInput.value || '#a855f7';
-        drawOutlinedText(ctx, dukSub, centerX, 640, dukSubSize, dukSubColor, 760, 800);
+        const resolvedSubSize = fitFontSize(dukSub, dukSubSize, 800, 760);
+        drawOutlinedText(ctx, dukSub, textLayers.dukunganSub.x, textLayers.dukunganSub.y, resolvedSubSize, dukSubColor, 760, 800);
+        if (isFreestyleMode) {
+            drawDebugBounds(getTextBounds('dukunganSub', [dukSub], resolvedSubSize, 800), activeLayer === 'dukunganSub');
+        }
     }
     
     const amtStr = formatIDR(amountInput.value);
     if (amountInput.value) {
         const amountSize = Number(amountSizeInput.value || 68);
         const amountColor = amountColorInput.value || '#a855f7';
-        drawOutlinedText(ctx, amtStr, centerX, 770, amountSize, amountColor, 700, 900);
+        const resolvedAmountSize = fitFontSize(amtStr, amountSize, 900, 700);
+        drawOutlinedText(ctx, amtStr, textLayers.amount.x, textLayers.amount.y, resolvedAmountSize, amountColor, 700, 900);
+        if (isFreestyleMode) {
+            drawDebugBounds(getTextBounds('amount', [amtStr], resolvedAmountSize, 900), activeLayer === 'amount');
+        }
     }
     
     const dateStr = formatIndonesianDate(dateInput.value);
@@ -289,13 +441,18 @@ function renderCard() {
         ctx.font = `700 ${resolvedDateSize}px "Inter", sans-serif`;
         ctx.textAlign = 'center';
         ctx.fillStyle = dateColor;
-        ctx.fillText(dateStr, centerX + 45, 860); // Added + 20 to move it slightly right
+        ctx.fillText(dateStr, textLayers.date.x, textLayers.date.y);
+        if (isFreestyleMode) {
+            drawDebugBounds(getTextBounds('date', [dateStr], resolvedDateSize, 700), activeLayer === 'date');
+        }
     }
 }
 
 [nameInput, dukunganHeaderInput, dukunganSubInput, dateInput, amountInput, nameSizeInput, nameColorInput, dukunganHeaderSizeInput, dukunganHeaderColorInput, dukunganSubSizeInput, dukunganSubColorInput, amountSizeInput, amountColorInput, dateSizeInput, dateColorInput].forEach(input => {
     input.addEventListener('input', renderCard);
 });
+
+freestyleBtn.addEventListener('click', cycleFreestyleMode);
 
 downloadBtn.addEventListener('click', () => {
     const link = document.createElement('a');
@@ -306,3 +463,4 @@ downloadBtn.addEventListener('click', () => {
 
 loadTemplates();
 initColorPickers();
+updateFreestyleButton();
